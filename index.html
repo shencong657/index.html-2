@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <!-- 关键：修复移动端视口适配 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="format-detection" content="telephone=no">
+    <title>CDK领取中心</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            padding: 15px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 100%;
+            background: white;
+            padding: 20px 15px;
+            border-radius: 12px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 25px;
+            font-size: 22px;
+            font-weight: 600;
+        }
+        
+        .cdk-card {
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+            padding: 18px 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: block;
+        }
+        
+        .cdk-item {
+            margin: 12px 0;
+            font-size: 16px;
+            line-height: 1.5;
+            word-break: break-all; /* 防止长文本溢出 */
+        }
+        
+        .cdk-label {
+            font-weight: 600;
+            color: #555;
+            margin-right: 8px;
+        }
+        
+        .btn-container {
+            text-align: center;
+            margin: 25px 0;
+        }
+        
+        #getCdkBtn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s;
+            width: 100%; /* 手机端按钮全屏宽 */
+            max-width: 300px;
+            touch-action: manipulation; /* 优化移动端触摸 */
+        }
+        
+        #getCdkBtn:hover, #getCdkBtn:active {
+            background: #0056b3;
+        }
+        
+        #getCdkBtn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        .info-text {
+            text-align: center;
+            color: #666;
+            margin: 15px 0;
+            font-size: 15px;
+            line-height: 1.6;
+            padding: 0 10px;
+        }
+        
+        .warning {
+            color: #dc3545;
+            font-weight: 600;
+        }
+        
+        .success {
+            color: #28a745;
+            font-weight: 600;
+        }
+        
+        .usage-info {
+            background: #e9f7fe;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #333;
+            line-height: 1.8;
+        }
+        
+        .usage-info ul {
+            padding-left: 20px;
+            margin-top: 8px;
+        }
+        
+        .usage-info li {
+            margin: 6px 0;
+        }
+        
+        /* 适配小屏手机 */
+        @media (max-width: 375px) {
+            h1 {
+                font-size: 20px;
+            }
+            
+            #getCdkBtn {
+                padding: 14px 30px;
+                font-size: 16px;
+            }
+            
+            .cdk-item {
+                font-size: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>CDK领取中心</h1>
+        
+        <div class="info-text" id="statusText">
+            点击下方按钮领取CDK，每人3天内最多领取7次，且领取的CDK不重复
+        </div>
+        
+        <div class="btn-container">
+            <button id="getCdkBtn" onclick="getCDK()">领取CDK</button>
+        </div>
+        
+        <div class="cdk-card" id="cdkCard">
+            <div class="cdk-item">
+                <span class="cdk-label">CDK：</span>
+                <span id="cdkCode">未领取</span>
+            </div>
+            <div class="cdk-item">
+                <span class="cdk-label">助力码：</span>
+                <span id="inviteCode">未领取</span>
+            </div>
+        </div>
+        
+        <div class="usage-info">
+            <p>📌 领取规则：</p>
+            <ul>
+                <li>每个用户3天内最多可领取7次CDK</li>
+                <li>每次领取的CDK都不会重复</li>
+                <li>3天内所有用户领取的CDK都不重复</li>
+                <li>第四天开始，CDK池会重置，可领取第一天发放过的CDK</li>
+                <li>当前已领取次数：<span id="usedCount">0</span>/7</li>
+                <li>距离重置时间：<span id="resetTime">0</span>小时</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // CDK数据列表
+        const cdkList = [
+            { cdk: "ks2BX5jm", invite: "10WsWekjrB" },
+            { cdk: "8juatHcb", invite: "GPHkHvvqZq" },
+            { cdk: "B4NROpIY", invite: "GxQm1j0QHP" },
+            { cdk: "LjuBSVtj", invite: "beeTG7lOiq" },
+            { cdk: "MHQk6p54", invite: "wE9eiuhYNN" },
+            { cdk: "DxOTQjoP", invite: "stnVz0Ovjv" },
+            { cdk: "3dMr53Gw", invite: "TodYSxDfS6" },
+            { cdk: "qYm1sONo", invite: "MsDVHwRW6k" },
+            { cdk: "2Ygl0buT", invite: "YfLWgWcCXe" },
+            { cdk: "YtjAs3rx", invite: "jK5kWTT5Hn" },
+            { cdk: "TVhsFSnn", invite: "arshMo3RHO" },
+            { cdk: "S1U04aOb", invite: "ShLCPCX4VT" },
+            { cdk: "XCdVqgGX", invite: "yz6USv0kpG" },
+            { cdk: "PZZMBSgR", invite: "QZjnhtK7TM" },
+            { cdk: "BRk6025E", invite: "gxERWW7oKR" },
+            { cdk: "k6iFag3c", invite: "WGrhb6Gqzk" },
+            { cdk: "3EsHDukT", invite: "HBvHtOda6l" },
+            { cdk: "pOSNjTHU", invite: "nkHFzZks9e" },
+            { cdk: "PDGI9x2T", invite: "hll2qLq1Qd" },
+            { cdk: "lwystvTB", invite: "9AAxuzymV0" },
+            { cdk: "HWoIhYOz", invite: "DD54nZjGBk" },
+            { cdk: "I3O77sZk", invite: "N9SeSyO3gR" },
+            { cdk: "OEDozIIr", invite: "GcL3MUCfYt" },
+            { cdk: "95oThX4j", invite: "z5KgN11Xuy" },
+            { cdk: "jUNm0H4w", invite: "gpM4oVOH2L" },
+            { cdk: "sPcN6dl5", invite: "GVyxT9Bfso" },
+            { cdk: "nhe26yNS", invite: "FyZFabxOru" },
+            { cdk: "Ytixf04R", invite: "nRq6erUdKU" },
+            { cdk: "rbzmWj1O", invite: "mkQloEeLat" },
+            { cdk: "D8fnzI9p", invite: "GGahUUFfIf" },
+            { cdk: "NtLlgGFP", invite: "nkaQiIOleU" },
+            { cdk: "xAGIG1rq", invite: "3cCq83QfU3" },
+            { cdk: "HLHQRKe8", invite: "hsKZwmlea6" },
+            { cdk: "uWpSqA9O", invite: "cIuSWTltAl" },
+            { cdk: "U3Tc5xHb", invite: "Gpz0bzOfRO" },
+            { cdk: "9jiYgu8x", invite: "uHgFlRGoiS" },
+            { cdk: "vI4XTsQ6", invite: "pVyHY4gKYg" },
+            { cdk: "GgcUWYAi", invite: "hqhHIVsC1g" },
+            { cdk: "YIkdSAd7", invite: "EzpKcChDeU" },
+            { cdk: "9oErToLC", invite: "MWvoSYS5TH" },
+            { cdk: "wNLUxayA", invite: "CiojAEkXu3" },
+            { cdk: "84VdUlIO", invite: "rgQLSmKpNs" },
+            { cdk: "nTxVlHeY", invite: "0AkmxiwsmG" },
+            { cdk: "U2A2NRZa", invite: "LN9qSbC3Vz" },
+            { cdk: "U8xYDr8K", invite: "VAx1oZqOcf" },
+            { cdk: "bX1FCEat", invite: "QxIoKuaOgm" },
+            { cdk: "eE7SAl9K", invite: "1eF2t5jeLd" },
+            { cdk: "jkF45K59", invite: "oI8BsdXfgG" },
+            { cdk: "DqNiROLH", invite: "Q5aNnOX5w7" },
+            { cdk: "oh2K8PPj", invite: "2tSj1F6SMC" },
+            { cdk: "XClv7gAk", invite: "KSNnfZGeOA" },
+            { cdk: "GZMcC1Ww", invite: "WFUKuT3uiW" },
+            { cdk: "H3vrn83b", invite: "OVgoWxjtuE" },
+            { cdk: "ODMpTRem", invite: "ZjKTEepXQu" },
+            { cdk: "mqeNs6ST", invite: "P5fB3LhzpB" },
+            { cdk: "zGGDhuQ3", invite: "qUI90dt8iX" },
+            { cdk: "vyLQ8X6P", invite: "VWt9275GI8" },
+            { cdk: "CbuRWTrX", invite: "ahahyFESuH" },
+            { cdk: "B7dIIsbd", invite: "uNlSGsV9i0" },
+            { cdk: "7QMSmk7u", invite: "GnOhPcBBQd" },
+            { cdk: "eOB6w4zK", invite: "U10jdFg2GG" },
+            { cdk: "3Uq7bV8L", invite: "bvqVvh9si2" },
+            { cdk: "l7Wgpln8", invite: "eM1146l60r" },
+            { cdk: "eQKqHlIw", invite: "bf2Q3A8Nic" },
+            { cdk: "ipdHQ0V8", invite: "3WcyWNHs2C" },
+            { cdk: "pmd3okUX", invite: "pZ0sbIr6Lf" },
+            { cdk: "TDnZLfzf", invite: "x61GcvxQHC" },
+            { cdk: "V1BTLccz", invite: "GO0h0e2Zgg" },
+            { cdk: "gUu0lDek", invite: "mrynPzhBws" },
+            { cdk: "BwEShq69", invite: "XX5LW0e4a5" },
+            { cdk: "TitsOLUR", invite: "hQPiF4M1Z6" },
+            { cdk: "pPDHQdOp", invite: "Dgnw0QxPHi" },
+            { cdk: "5KFXmDG7", invite: "40g4RLK6YB" },
+            { cdk: "HZSILTq3", invite: "w5mywkXYTb" },
+            { cdk: "rrUqCWyn", invite: "Uf8O8mC1NM" },
+            { cdk: "BFeqSpmX", invite: "aUdNfbbSdY" },
+            { cdk: "3veU7Hu2", invite: "Dab2XlrA7O" },
+            { cdk: "sXSOeHT6", invite: "nllazWHuxz" },
+            { cdk: "qTUGz9Hb", invite: "FZmUEGFZ1D" },
+            { cdk: "MHCiFvLB", invite: "Ip3OQwCROZ" },
+            { cdk: "vcvQj9kH", invite: "ZUYHqt0YiP" },
+            { cdk: "n7IoKnUb", invite: "4pQalyDGcA" },
+            { cdk: "aMPUGR9s", invite: "Z6oztHqi9K" },
+            { cdk: "KQAONZff", invite: "iIoIOKH8Gj" },
+            { cdk: "97u8sK1x", invite: "H8FCgqOK20" },
+            { cdk: "GPuw8RGq", invite: "hpRTtZRRhc" },
+            { cdk: "MDgsMH91", invite: "tPUmW5fOww" },
+            { cdk: "48g1k3uf", invite: "DBEU8lo7Wg" },
+            { cdk: "XMmEOT9G", invite: "AGeXrT4wPS" },
+            { cdk: "xGXi4bRA", invite: "Nl30UGvjfG" },
+            { cdk: "lmErkGXL", invite: "Biqibb9m3E" },
+            { cdk: "w5VDiAzK", invite: "cWoeMSuFha" },
+            { cdk: "g7w4SVW6", invite: "TYP4aPykuH" },
+            { cdk: "Ush5RSNE", invite: "1FHPqpwIMR" },
+            { cdk: "ehsM4y7Q", invite: "VA6458GcwY" },
+            { cdk: "xqo3UbUh", invite: "A4SgkgNy7S" },
+            { cdk: "k2Gbod2Y", invite: "SZ13ZPKEFs" },
+            { cdk: "l5EApIv5", invite: "Mva2YYa7Kp" },
+            { cdk: "oWYdB98q", invite: "l3MIlnC3sc" },
+            { cdk: "MOwPQBIy", invite: "HzSi3OSu63" }
+        ];
+
+        // 配置项
+        const CONFIG = {
+            MAX_CLAIMS_PER_PERIOD: 7,
+            PERIOD_DURATION: 3 * 24 * 60 * 60 * 1000,
+        };
+
+        // 移动端兼容的页面加载事件
+        function initPage() {
+            updateUsageInfo();
+            checkClaimStatus();
+        }
+
+        // 兼容不同浏览器的加载事件
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+            initPage();
+        } else {
+            document.addEventListener('DOMContentLoaded', initPage);
+            window.addEventListener('load', initPage);
+        }
+
+        // 安全获取localStorage（兼容隐私模式）
+        function safeLocalStorageGet(key) {
+            try {
+                return localStorage.getItem(key);
+            } catch (e) {
+                return null; // 隐私模式下返回null
+            }
+        }
+
+        // 安全设置localStorage
+        function safeLocalStorageSet(key, value) {
+            try {
+                localStorage.setItem(key, value);
+                return true;
+            } catch (e) {
+                console.warn('本地存储不可用，部分功能受限');
+                return false;
+            }
+        }
+
+        // 获取用户唯一标识
+        function getUserId() {
+            let userId = safeLocalStorageGet('cdk_user_id');
+            if (!userId) {
+                userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                safeLocalStorageSet('cdk_user_id', userId);
+            }
+            return userId;
+        }
+
+        // 获取用户领取记录
+        function getUserClaimRecord() {
+            const record = safeLocalStorageGet('cdk_user_claims');
+            return record ? JSON.parse(record) : {
+                claims: [],
+                periodStart: Date.now()
+            };
+        }
+
+        // 获取全局发放记录
+        function getGlobalClaimRecord() {
+            const record = safeLocalStorageGet('cdk_global_claims');
+            return record ? JSON.parse(record) : {
+                issuedCdks: [],
+                periodStart: Date.now()
+            };
+        }
+
+        // 检查并重置周期
+        function checkAndResetPeriod(userRecord, globalRecord) {
+            const now = Date.now();
+            
+            if (now - userRecord.periodStart > CONFIG.PERIOD_DURATION) {
+                userRecord.claims = [];
+                userRecord.periodStart = now;
+                safeLocalStorageSet('cdk_user_claims', JSON.stringify(userRecord));
+            }
+            
+            if (now - globalRecord.periodStart > CONFIG.PERIOD_DURATION) {
+                globalRecord.issuedCdks = [];
+                globalRecord.periodStart = now;
+                safeLocalStorageSet('cdk_global_claims', JSON.stringify(globalRecord));
+            }
+            
+            return { userRecord, globalRecord };
+        }
+
+        // 更新使用信息
+        function updateUsageInfo() {
+            const userRecord = getUserClaimRecord();
+            const now = Date.now();
+            
+            const usedCount = userRecord.claims.length;
+            document.getElementById('usedCount').textContent = usedCount;
+            
+            const timeLeft = Math.max(0, (userRecord.periodStart + CONFIG.PERIOD_DURATION) - now);
+            const hoursLeft = Math.ceil(timeLeft / (60 * 60 * 1000));
+            document.getElementById('resetTime').textContent = hoursLeft;
+        }
+
+        // 检查领取状态
+        function checkClaimStatus() {
+            const userRecord = getUserClaimRecord();
+            const { userRecord: updatedUserRecord } = checkAndResetPeriod(userRecord, getGlobalClaimRecord());
+            
+            const btn = document.getElementById('getCdkBtn');
+            const statusText = document.getElementById('statusText');
+            
+            if (updatedUserRecord.claims.length >= CONFIG.MAX_CLAIMS_PER_PERIOD) {
+                btn.disabled = true;
+                statusText.textContent = `你已达到3天内最大领取次数(${CONFIG.MAX_CLAIMS_PER_PERIOD}次)，请等待周期重置后再试！`;
+                statusText.className = 'info-text warning';
+            } else {
+                btn.disabled = false;
+                statusText.textContent = `点击下方按钮领取CDK，每人3天内最多领取${CONFIG.MAX_CLAIMS_PER_PERIOD}次，且领取的CDK不重复`;
+                statusText.className = 'info-text';
+            }
+        }
+
+        // 获取未发放的CDK
+        function getUnissuedCDK(globalRecord) {
+            const availableCdks = cdkList.filter(item => !globalRecord.issuedCdks.includes(item.cdk));
+            
+            if (availableCdks.length === 0) {
+                return null;
+            }
+            
+            const randomIndex = Math.floor(Math.random() * availableCdks.length);
+            return availableCdks[randomIndex];
+        }
+
+        // 领取CDK主函数（兼容移动端触摸）
+        function getCDK() {
+            try {
+                let userRecord = getUserClaimRecord();
+                let globalRecord = getGlobalClaimRecord();
+                
+                const { userRecord: updatedUserRecord, globalRecord: updatedGlobalRecord } = checkAndResetPeriod(userRecord, globalRecord);
+                
+                if (updatedUserRecord.claims.length >= CONFIG.MAX_CLAIMS_PER_PERIOD) {
+                    document.getElementById('statusText').textContent = `你已达到3天内最大领取次数(${CONFIG.MAX_CLAIMS_PER_PERIOD}次)！`;
+                    document.getElementById('statusText').className = 'info-text warning';
+                    return;
+                }
+                
+                const cdkItem = getUnissuedCDK(updatedGlobalRecord);
+                if (!cdkItem) {
+                    document.getElementById('statusText').textContent = '当前暂无可用的CDK，请稍后再试！';
+                    document.getElementById('statusText').className = 'info-text warning';
+                    return;
+                }
+                
+                updatedUserRecord.claims.push({
+                    cdk: cdkItem.cdk,
+                    invite: cdkItem.invite,
+                    timestamp: Date.now()
+                });
+                
+                updatedGlobalRecord.issuedCdks.push(cdkItem.cdk);
+                
+                safeLocalStorageSet('cdk_user_claims', JSON.stringify(updatedUserRecord));
+                safeLocalStorageSet('cdk_global_claims', JSON.stringify(updatedGlobalRecord));
+                
+                document.getElementById('cdkCode').textContent = cdkItem.cdk;
+                document.getElementById('inviteCode').textContent = cdkItem.invite;
+                
+                document.getElementById('statusText').textContent = '领取成功！CDK和助力码如上：';
+                document.getElementById('statusText').className = 'info-text success';
+                updateUsageInfo();
+                checkClaimStatus();
+                
+            } catch (error) {
+                console.error('领取CDK出错:', error);
+                document.getElementById('statusText').textContent = '领取失败，请刷新页面重试！';
+                document.getElementById('statusText').className = 'info-text warning';
+            }
+        }
+
+        // 为移动端添加触摸事件支持
+        document.getElementById('getCdkBtn').addEventListener('touchstart', function(e) {
+            e.preventDefault(); // 防止默认行为
+            this.style.background = '#0056b3';
+        });
+
+        document.getElementById('getCdkBtn').addEventListener('touchend', function(e) {
+            e.preventDefault();
+            if (!this.disabled) {
+                this.style.background = '#007bff';
+                getCDK();
+            }
+        });
+    </script>
+</body>
+</html>
