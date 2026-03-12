@@ -1,482 +1,674 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <!-- 关键：修复移动端视口适配 -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black">
-    <meta name="format-detection" content="telephone=no">
-    <title>CDK领取中心</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>网页版代码对比工具 · 行级diff + 同步滚动</title>
+    <!-- 使用 diff 库 (jsdiff) 进行行级对比 -->
+    <script src="https://cdn.jsdelivr.net/npm/diff@5.1.0/dist/diff.min.js"></script>
     <style>
         * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
-            font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
         }
-        
+
         body {
-            background-color: #f5f7fa;
-            padding: 15px;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: #f5f7fa;
             min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            padding: 2rem 1rem;
         }
-        
+
         .container {
+            max-width: 1400px;
             width: 100%;
-            max-width: 100%;
             background: white;
-            padding: 20px 15px;
-            border-radius: 12px;
-            box-shadow: 0 2px 15px rgba(0,0,0,0.08);
-            margin: 0 auto;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+            padding: 2rem;
         }
-        
+
         h1 {
-            color: #333;
-            text-align: center;
-            margin-bottom: 25px;
-            font-size: 22px;
+            font-size: 2rem;
             font-weight: 600;
+            margin-bottom: 0.25rem;
+            color: #1e293b;
+            letter-spacing: -0.02em;
         }
-        
-        .cdk-card {
-            background: #f8f9fa;
-            border-left: 4px solid #007bff;
-            padding: 18px 15px;
-            border-radius: 8px;
-            margin: 20px 0;
-            display: block;
+
+        .sub {
+            color: #64748b;
+            margin-bottom: 2rem;
+            border-left: 4px solid #3b82f6;
+            padding-left: 1rem;
+            font-weight: 400;
         }
-        
-        .cdk-item {
-            margin: 12px 0;
-            font-size: 16px;
+
+        /* 输入区域 */
+        .input-area {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .input-box {
+            flex: 1 1 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .input-box label {
+            font-weight: 600;
+            color: #334155;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .input-box label span {
+            background: #e2e8f0;
+            padding: 0.2rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: #475569;
+        }
+
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 1rem;
+            font-family: 'Fira Code', 'JetBrains Mono', 'Cascadia Code', 'Menlo', monospace;
+            font-size: 0.9rem;
             line-height: 1.5;
-            word-break: break-all; /* 防止长文本溢出 */
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            border-radius: 16px;
+            resize: vertical;
+            outline: none;
+            transition: 0.15s;
+            white-space: pre;
+            overflow: auto;
         }
-        
-        .cdk-label {
-            font-weight: 600;
-            color: #555;
-            margin-right: 8px;
+
+        textarea:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 4px rgba(59,130,246,0.15);
+            background: #ffffff;
         }
-        
-        .btn-container {
-            text-align: center;
-            margin: 25px 0;
+
+        .action-row {
+            display: flex;
+            justify-content: center;
+            margin: 0.5rem 0 2rem 0;
         }
-        
-        #getCdkBtn {
-            background: #007bff;
+
+        .diff-btn {
+            background: #3b82f6;
             color: white;
             border: none;
-            padding: 15px 40px;
-            font-size: 18px;
-            border-radius: 8px;
+            padding: 0.9rem 3rem;
+            border-radius: 40px;
+            font-size: 1.2rem;
+            font-weight: 600;
             cursor: pointer;
-            transition: background 0.3s;
-            width: 100%; /* 手机端按钮全屏宽 */
-            max-width: 300px;
-            touch-action: manipulation; /* 优化移动端触摸 */
+            box-shadow: 0 8px 20px rgba(59,130,246,0.3);
+            transition: all 0.2s;
+            border: 1px solid #2563eb;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
         }
-        
-        #getCdkBtn:hover, #getCdkBtn:active {
-            background: #0056b3;
+
+        .diff-btn:hover {
+            background: #2563eb;
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(37,99,235,0.3);
         }
-        
-        #getCdkBtn:disabled {
-            background: #6c757d;
-            cursor: not-allowed;
+
+        .diff-btn:active {
+            background: #1d4ed8;
+            transform: translateY(1px);
+            box-shadow: 0 4px 12px rgba(37,99,235,0.4);
         }
-        
-        .info-text {
-            text-align: center;
-            color: #666;
-            margin: 15px 0;
-            font-size: 15px;
+
+        /* 对比视图区域 */
+        .diff-view {
+            display: flex;
+            border: 1px solid #e2e8f0;
+            border-radius: 20px;
+            overflow: hidden;
+            background: #ffffff;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.02);
+            margin-top: 0.5rem;
+        }
+
+        .panel {
+            width: 50%;
+            display: flex;
+            flex-direction: column;
+            background: #fcfcfd;
+            max-height: 500px;
+            overflow: auto;
+            scroll-behavior: auto;
+            font-family: 'Fira Code', 'JetBrains Mono', 'Menlo', monospace;
+            font-size: 0.9rem;
             line-height: 1.6;
-            padding: 0 10px;
+            white-space: pre-wrap;
+            word-break: break-word;
+            counter-reset: line;
         }
-        
-        .warning {
-            color: #dc3545;
-            font-weight: 600;
+
+        .left-panel {
+            border-right: 1px solid #e9eef2;
         }
-        
-        .success {
-            color: #28a745;
-            font-weight: 600;
+
+        /* 行结构 */
+        .line-row {
+            display: flex;
+            width: 100%;
+            min-height: 1.8em;
         }
-        
-        .usage-info {
-            background: #e9f7fe;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 20px;
-            font-size: 14px;
-            color: #333;
-            line-height: 1.8;
+
+        .line-gutter {
+            width: 4.5rem;
+            padding: 0 0.5rem 0 0.8rem;
+            background: #f1f5f9;
+            color: #475569;
+            text-align: right;
+            user-select: none;
+            border-right: 1px solid #d1d9e6;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            flex-shrink: 0;
         }
-        
-        .usage-info ul {
-            padding-left: 20px;
-            margin-top: 8px;
+
+        .line-content {
+            flex: 1;
+            padding: 0 0.8rem;
+            white-space: pre-wrap;
+            word-break: break-all;
+            background-color: #ffffff;
+            border-bottom: 1px solid #f1f5f9;
         }
-        
-        .usage-info li {
-            margin: 6px 0;
+
+        /* 高亮配色 */
+        .deleted .line-content {
+            background-color: #ffe8e8;
         }
-        
-        /* 适配小屏手机 */
-        @media (max-width: 375px) {
-            h1 {
-                font-size: 20px;
-            }
-            
-            #getCdkBtn {
-                padding: 14px 30px;
-                font-size: 16px;
-            }
-            
-            .cdk-item {
-                font-size: 15px;
-            }
+
+        .added .line-content {
+            background-color: #e6f7e6;
         }
+
+        /* 左右面板可能同时有内容不同但都非空（替换行）——左侧用删除色，右侧用新增色 */
+        .left-panel .line-row.deleted .line-content {
+            background-color: #ffe0e0;
+        }
+        .right-panel .line-row.added .line-content {
+            background-color: #dcfce7;
+        }
+
+        /* 让行号背景保持统一，不受高亮影响 */
+        .line-row .line-gutter {
+            background: #f1f5f9;
+            z-index: 1;
+        }
+
+        /* 占位空行不加背景，保持干净 */
+        .line-row .line-content:empty::before {
+            content: " ";
+            white-space: pre;
+        }
+
+        /* 空行在视觉上保留高度 */
+        .line-row:has(.line-content:empty) {
+            opacity: 0.9;
+        }
+
+        /* 脚注说明 */
+        .legend {
+            display: flex;
+            gap: 2rem;
+            margin-top: 1.5rem;
+            justify-content: flex-end;
+            color: #475569;
+            font-size: 0.85rem;
+            padding: 0.5rem 1rem;
+            background: #f8fafc;
+            border-radius: 40px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .color-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+        }
+        .dot-del { background: #ffe0e0; border: 1px solid #fecaca; }
+        .dot-add { background: #dcfce7; border: 1px solid #bbf7d0; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>CDK领取中心</h1>
-        
-        <div class="info-text" id="statusText">
-            点击下方按钮领取CDK，每人3天内最多领取7次，且领取的CDK不重复
+<div class="container">
+    <h1>📄 代码对比 · 并排高亮</h1>
+    <div class="sub">原始代码 vs 修改后代码 — 改动行高亮，滚动条同步，带有行号</div>
+
+    <!-- 输入区域 -->
+    <div class="input-area">
+        <div class="input-box">
+            <label>📌 原始代码 <span>左侧</span></label>
+            <textarea id="originalInput" placeholder="粘贴原始代码...">function hello() {
+  console.log("Hello");
+  // 这是一行注释
+  let a = 42;
+}</textarea>
         </div>
-        
-        <div class="btn-container">
-            <button id="getCdkBtn" onclick="getCDK()">领取CDK</button>
-        </div>
-        
-        <div class="cdk-card" id="cdkCard">
-            <div class="cdk-item">
-                <span class="cdk-label">CDK：</span>
-                <span id="cdkCode">未领取</span>
-            </div>
-            <div class="cdk-item">
-                <span class="cdk-label">助力码：</span>
-                <span id="inviteCode">未领取</span>
-            </div>
-        </div>
-        
-        <div class="usage-info">
-            <p>📌 领取规则：</p>
-            <ul>
-                <li>每个用户3天内最多可领取7次CDK</li>
-                <li>每次领取的CDK都不会重复</li>
-                <li>3天内所有用户领取的CDK都不重复</li>
-                <li>第四天开始，CDK池会重置，可领取第一天发放过的CDK</li>
-                <li>当前已领取次数：<span id="usedCount">0</span>/7</li>
-                <li>距离重置时间：<span id="resetTime">0</span>小时</li>
-            </ul>
+        <div class="input-box">
+            <label>📌 修改后代码 <span>右侧</span></label>
+            <textarea id="modifiedInput" placeholder="粘贴修改后代码...">function hello() {
+  console.log("Hello, world!");
+  let a = 100;
+  // 新增一行
+  return a;
+}</textarea>
         </div>
     </div>
 
-    <script>
-        // CDK数据列表
-        const cdkList = [
-            { cdk: "ks2BX5jm", invite: "10WsWekjrB" },
-            { cdk: "8juatHcb", invite: "GPHkHvvqZq" },
-            { cdk: "B4NROpIY", invite: "GxQm1j0QHP" },
-            { cdk: "LjuBSVtj", invite: "beeTG7lOiq" },
-            { cdk: "MHQk6p54", invite: "wE9eiuhYNN" },
-            { cdk: "DxOTQjoP", invite: "stnVz0Ovjv" },
-            { cdk: "3dMr53Gw", invite: "TodYSxDfS6" },
-            { cdk: "qYm1sONo", invite: "MsDVHwRW6k" },
-            { cdk: "2Ygl0buT", invite: "YfLWgWcCXe" },
-            { cdk: "YtjAs3rx", invite: "jK5kWTT5Hn" },
-            { cdk: "TVhsFSnn", invite: "arshMo3RHO" },
-            { cdk: "S1U04aOb", invite: "ShLCPCX4VT" },
-            { cdk: "XCdVqgGX", invite: "yz6USv0kpG" },
-            { cdk: "PZZMBSgR", invite: "QZjnhtK7TM" },
-            { cdk: "BRk6025E", invite: "gxERWW7oKR" },
-            { cdk: "k6iFag3c", invite: "WGrhb6Gqzk" },
-            { cdk: "3EsHDukT", invite: "HBvHtOda6l" },
-            { cdk: "pOSNjTHU", invite: "nkHFzZks9e" },
-            { cdk: "PDGI9x2T", invite: "hll2qLq1Qd" },
-            { cdk: "lwystvTB", invite: "9AAxuzymV0" },
-            { cdk: "HWoIhYOz", invite: "DD54nZjGBk" },
-            { cdk: "I3O77sZk", invite: "N9SeSyO3gR" },
-            { cdk: "OEDozIIr", invite: "GcL3MUCfYt" },
-            { cdk: "95oThX4j", invite: "z5KgN11Xuy" },
-            { cdk: "jUNm0H4w", invite: "gpM4oVOH2L" },
-            { cdk: "sPcN6dl5", invite: "GVyxT9Bfso" },
-            { cdk: "nhe26yNS", invite: "FyZFabxOru" },
-            { cdk: "Ytixf04R", invite: "nRq6erUdKU" },
-            { cdk: "rbzmWj1O", invite: "mkQloEeLat" },
-            { cdk: "D8fnzI9p", invite: "GGahUUFfIf" },
-            { cdk: "NtLlgGFP", invite: "nkaQiIOleU" },
-            { cdk: "xAGIG1rq", invite: "3cCq83QfU3" },
-            { cdk: "HLHQRKe8", invite: "hsKZwmlea6" },
-            { cdk: "uWpSqA9O", invite: "cIuSWTltAl" },
-            { cdk: "U3Tc5xHb", invite: "Gpz0bzOfRO" },
-            { cdk: "9jiYgu8x", invite: "uHgFlRGoiS" },
-            { cdk: "vI4XTsQ6", invite: "pVyHY4gKYg" },
-            { cdk: "GgcUWYAi", invite: "hqhHIVsC1g" },
-            { cdk: "YIkdSAd7", invite: "EzpKcChDeU" },
-            { cdk: "9oErToLC", invite: "MWvoSYS5TH" },
-            { cdk: "wNLUxayA", invite: "CiojAEkXu3" },
-            { cdk: "84VdUlIO", invite: "rgQLSmKpNs" },
-            { cdk: "nTxVlHeY", invite: "0AkmxiwsmG" },
-            { cdk: "U2A2NRZa", invite: "LN9qSbC3Vz" },
-            { cdk: "U8xYDr8K", invite: "VAx1oZqOcf" },
-            { cdk: "bX1FCEat", invite: "QxIoKuaOgm" },
-            { cdk: "eE7SAl9K", invite: "1eF2t5jeLd" },
-            { cdk: "jkF45K59", invite: "oI8BsdXfgG" },
-            { cdk: "DqNiROLH", invite: "Q5aNnOX5w7" },
-            { cdk: "oh2K8PPj", invite: "2tSj1F6SMC" },
-            { cdk: "XClv7gAk", invite: "KSNnfZGeOA" },
-            { cdk: "GZMcC1Ww", invite: "WFUKuT3uiW" },
-            { cdk: "H3vrn83b", invite: "OVgoWxjtuE" },
-            { cdk: "ODMpTRem", invite: "ZjKTEepXQu" },
-            { cdk: "mqeNs6ST", invite: "P5fB3LhzpB" },
-            { cdk: "zGGDhuQ3", invite: "qUI90dt8iX" },
-            { cdk: "vyLQ8X6P", invite: "VWt9275GI8" },
-            { cdk: "CbuRWTrX", invite: "ahahyFESuH" },
-            { cdk: "B7dIIsbd", invite: "uNlSGsV9i0" },
-            { cdk: "7QMSmk7u", invite: "GnOhPcBBQd" },
-            { cdk: "eOB6w4zK", invite: "U10jdFg2GG" },
-            { cdk: "3Uq7bV8L", invite: "bvqVvh9si2" },
-            { cdk: "l7Wgpln8", invite: "eM1146l60r" },
-            { cdk: "eQKqHlIw", invite: "bf2Q3A8Nic" },
-            { cdk: "ipdHQ0V8", invite: "3WcyWNHs2C" },
-            { cdk: "pmd3okUX", invite: "pZ0sbIr6Lf" },
-            { cdk: "TDnZLfzf", invite: "x61GcvxQHC" },
-            { cdk: "V1BTLccz", invite: "GO0h0e2Zgg" },
-            { cdk: "gUu0lDek", invite: "mrynPzhBws" },
-            { cdk: "BwEShq69", invite: "XX5LW0e4a5" },
-            { cdk: "TitsOLUR", invite: "hQPiF4M1Z6" },
-            { cdk: "pPDHQdOp", invite: "Dgnw0QxPHi" },
-            { cdk: "5KFXmDG7", invite: "40g4RLK6YB" },
-            { cdk: "HZSILTq3", invite: "w5mywkXYTb" },
-            { cdk: "rrUqCWyn", invite: "Uf8O8mC1NM" },
-            { cdk: "BFeqSpmX", invite: "aUdNfbbSdY" },
-            { cdk: "3veU7Hu2", invite: "Dab2XlrA7O" },
-            { cdk: "sXSOeHT6", invite: "nllazWHuxz" },
-            { cdk: "qTUGz9Hb", invite: "FZmUEGFZ1D" },
-            { cdk: "MHCiFvLB", invite: "Ip3OQwCROZ" },
-            { cdk: "vcvQj9kH", invite: "ZUYHqt0YiP" },
-            { cdk: "n7IoKnUb", invite: "4pQalyDGcA" },
-            { cdk: "aMPUGR9s", invite: "Z6oztHqi9K" },
-            { cdk: "KQAONZff", invite: "iIoIOKH8Gj" },
-            { cdk: "97u8sK1x", invite: "H8FCgqOK20" },
-            { cdk: "GPuw8RGq", invite: "hpRTtZRRhc" },
-            { cdk: "MDgsMH91", invite: "tPUmW5fOww" },
-            { cdk: "48g1k3uf", invite: "DBEU8lo7Wg" },
-            { cdk: "XMmEOT9G", invite: "AGeXrT4wPS" },
-            { cdk: "xGXi4bRA", invite: "Nl30UGvjfG" },
-            { cdk: "lmErkGXL", invite: "Biqibb9m3E" },
-            { cdk: "w5VDiAzK", invite: "cWoeMSuFha" },
-            { cdk: "g7w4SVW6", invite: "TYP4aPykuH" },
-            { cdk: "Ush5RSNE", invite: "1FHPqpwIMR" },
-            { cdk: "ehsM4y7Q", invite: "VA6458GcwY" },
-            { cdk: "xqo3UbUh", invite: "A4SgkgNy7S" },
-            { cdk: "k2Gbod2Y", invite: "SZ13ZPKEFs" },
-            { cdk: "l5EApIv5", invite: "Mva2YYa7Kp" },
-            { cdk: "oWYdB98q", invite: "l3MIlnC3sc" },
-            { cdk: "MOwPQBIy", invite: "HzSi3OSu63" }
-        ];
+    <div class="action-row">
+        <button class="diff-btn" id="diffButton">✨ 对比代码 & 高亮改动</button>
+    </div>
 
-        // 配置项
-        const CONFIG = {
-            MAX_CLAIMS_PER_PERIOD: 7,
-            PERIOD_DURATION: 3 * 24 * 60 * 60 * 1000,
+    <!-- 对比面板容器 -->
+    <div id="diffView" class="diff-view">
+        <!-- 左侧原始面板 -->
+        <div class="panel left-panel" id="leftPanel"></div>
+        <!-- 右侧修改面板 -->
+        <div class="panel right-panel" id="rightPanel"></div>
+    </div>
+
+    <!-- 图例 -->
+    <div class="legend">
+        <span class="legend-item"><span class="color-dot dot-del"></span> 删除 / 旧行</span>
+        <span class="legend-item"><span class="color-dot dot-add"></span> 新增 / 新行</span>
+        <span class="legend-item"><span style="background:#f1f5f9; width:18px;height:18px;border-radius:4px;border:1px solid #cbd5e1;"></span> 未改变</span>
+    </div>
+</div>
+
+<script>
+    (function() {
+        // 获取DOM元素
+        const originalInput = document.getElementById('originalInput');
+        const modifiedInput = document.getElementById('modifiedInput');
+        const diffButton = document.getElementById('diffButton');
+        const leftPanel = document.getElementById('leftPanel');
+        const rightPanel = document.getElementById('rightPanel');
+
+        // 锁定滚动同步标志
+        let scrollingLocked = false;
+
+        // 初始化示例 (立即渲染一次)
+        window.addEventListener('load', function() {
+            renderDiff();
+        });
+
+        diffButton.addEventListener('click', renderDiff);
+
+        // 核心渲染函数
+        function renderDiff() {
+            const originalText = originalInput.value;
+            const modifiedText = modifiedInput.value;
+
+            // 使用 diff 库进行行级对比 (保留空行)
+            const diffResult = Diff.diffLines(originalText, modifiedText);
+
+            // 构建左右对齐的行数组 (leftRows, rightRows)
+            const leftRows = [];
+            const rightRows = [];
+
+            for (let i = 0; i < diffResult.length; i++) {
+                const chunk = diffResult[i];
+
+                // 不变块
+                if (!chunk.added && !chunk.removed) {
+                    const lines = splitLinesPreserveEmpty(chunk.value);
+                    lines.forEach(line => {
+                        leftRows.push(line);
+                        rightRows.push(line);
+                    });
+                }
+                // 删除块 (可能后面紧跟增加块)
+                else if (chunk.removed) {
+                    const removedLines = splitLinesPreserveEmpty(chunk.value);
+                    let addedLines = [];
+
+                    // 探测下一个块是否是增加块
+                    if (i + 1 < diffResult.length && diffResult[i + 1].added) {
+                        addedLines = splitLinesPreserveEmpty(diffResult[i + 1].value);
+                        i++; // 跳过下一个增加块
+                    }
+
+                    // 合并处理删除+增加 (配对显示，即使数量不等也逐行对齐)
+                    const maxLen = Math.max(removedLines.length, addedLines.length);
+                    for (let j = 0; j < maxLen; j++) {
+                        leftRows.push(removedLines[j] !== undefined ? removedLines[j] : '');
+                        rightRows.push(addedLines[j] !== undefined ? addedLines[j] : '');
+                    }
+                }
+                // 单独的增加块 (前面没有删除块)
+                else if (chunk.added) {
+                    const addedLines = splitLinesPreserveEmpty(chunk.value);
+                    addedLines.forEach(line => {
+                        leftRows.push('');
+                        rightRows.push(line);
+                    });
+                }
+            }
+
+            // 清空面板
+            leftPanel.innerHTML = '';
+            rightPanel.innerHTML = '';
+
+            // 如果没有任何行（两个文本都空），显示占位提示
+            if (leftRows.length === 0) {
+                leftRows.push(''); rightRows.push(''); // 至少保留一行，避免空白面板
+            }
+
+            // 批量渲染行
+            for (let i = 0; i < leftRows.length; i++) {
+                const leftText = leftRows[i];
+                const rightText = rightRows[i];
+
+                // 创建左侧行
+                const leftRow = createLineRow(i + 1, leftText, 'left', rightText === '' && leftText !== '');
+                // 创建右侧行
+                const rightRow = createLineRow(i + 1, rightText, 'right', leftText === '' && rightText !== '');
+
+                // 附加高亮类 (deleted / added) —— 在createLineRow中已根据上下文标记
+                // 但有些情况左右都非空但内容不同(来自配对block)，左侧应标记删除，右侧标记增加
+                if (leftText !== '' && rightText !== '' && leftText !== rightText) {
+                    // 替换行：左红，右绿
+                    leftRow.classList.add('deleted');
+                    rightRow.classList.add('added');
+                } else {
+                    // 其他情况: 如果一侧为空另一侧非空，已由参数标记；若两侧相同(不变)，不加特殊类
+                    if (leftText === '' && rightText !== '') {
+                        rightRow.classList.add('added');
+                    }
+                    if (rightText === '' && leftText !== '') {
+                        leftRow.classList.add('deleted');
+                    }
+                }
+
+                leftPanel.appendChild(leftRow);
+                rightPanel.appendChild(rightRow);
+            }
+
+            // 确保滚动同步重新绑定 (移除之前的监听，重新绑定防止重复)
+            bindScrollSync();
+        }
+
+        /**
+         * 创建一行内容
+         * @param {number} lineNum 行号
+         * @param {string} text 代码文本
+         * @param {string} side 'left' 或 'right' (仅用于调试，不影响类)
+         * @param {boolean} isHighlight 是否根据空对面标记高亮（初步标记）
+         */
+        function createLineRow(lineNum, text, side, isHighlight) {
+            const row = document.createElement('div');
+            row.className = 'line-row';
+
+            // 行号
+            const gutter = document.createElement('span');
+            gutter.className = 'line-gutter';
+            gutter.textContent = lineNum;
+            row.appendChild(gutter);
+
+            // 内容
+            const contentSpan = document.createElement('span');
+            contentSpan.className = 'line-content';
+            // 注意: 使用textContent保证不解析html, 保留空格
+            contentSpan.textContent = text;
+            row.appendChild(contentSpan);
+
+            return row;
+        }
+
+        /**
+         * 分割字符串为行，并保留末尾空行 (基于换行符)
+         * 例如 "a\nb\n" -> ["a","b",""] ; "\n" -> ["",""] 
+         */
+        function splitLinesPreserveEmpty(str) {
+            if (str === '') return [];
+            // 使用正则分割，保留末尾空串
+            const lines = str.split(/\r?\n/);
+            // 如果字符串以换行结尾，split会在最后多出一个空串，我们保留它以代表末尾空行
+            // 但如果最后一项是空且原字符串没有以换行结尾，则说明最后多余，需要pop? 但split行为根据浏览器略有不同。
+            // 更保险：检测原字符串末尾是否有换行，有则保留所有，无则如果最后一项为空则去掉
+            const endsWithNewline = str.endsWith('\n') || str.endsWith('\r\n');
+            if (!endsWithNewline && lines.length > 0 && lines[lines.length-1] === '') {
+                lines.pop();
+            }
+            return lines;
+        }
+
+        // 滚动同步逻辑
+        function bindScrollSync() {
+            // 先移除之前可能绑定的监听器 (简单粗暴: 克隆替换? 但直接移除监听不好操作，用事件标志或重新获取)
+            // 移除所有scroll监听，用新监听。但无法直接移除，我们使用一个包装函数来避免叠加。
+            // 最简单：在每次渲染后移除旧的监听，重新添加。
+            const left = leftPanel;
+            const right = rightPanel;
+
+            // 移除之前绑定的处理函数 (通过获取绑定的函数有点麻烦，但我们可以在外部保存处理函数引用)
+            // 为了清晰，我们每次重新绑定前移除所有scroll事件（但可能移除其他无关的，但没关系）
+            // 更好的方式：使用命名函数并removeEventListener，但我们可以在绑定新函数前移除所有scroll（仅移除我们知道的）
+            // 简单处理: 用标志防止重复注册，但保留最后注册的两个。这里采用替换监听: 先移除旧的，再添加新的
+            // 因为没有保存旧函数，我们使用一次性绑定：在全局保存函数引用
+            if (window._leftScrollHandler) {
+                left.removeEventListener('scroll', window._leftScrollHandler);
+            }
+            if (window._rightScrollHandler) {
+                right.removeEventListener('scroll', window._rightScrollHandler);
+            }
+
+            function leftScrollHandler() {
+                if (!scrollingLocked) {
+                    scrollingLocked = true;
+                    right.scrollTop = left.scrollTop;
+                    right.scrollLeft = left.scrollLeft;   // 同时水平同步
+                    scrollingLocked = false;
+                }
+            }
+
+            function rightScrollHandler() {
+                if (!scrollingLocked) {
+                    scrollingLocked = true;
+                    left.scrollTop = right.scrollTop;
+                    left.scrollLeft = right.scrollLeft;
+                    scrollingLocked = false;
+                }
+            }
+
+            left.addEventListener('scroll', leftScrollHandler);
+            right.addEventListener('scroll', rightScrollHandler);
+
+            // 保存以便下次移除
+            window._leftScrollHandler = leftScrollHandler;
+            window._rightScrollHandler = rightScrollHandler;
+        }
+
+        // 初始绑定 (空面板时也需要绑定，但render后会重新绑定)
+        bindScrollSync();
+
+        // 附加功能: 点击对比后保证同步滚动起点一致 (重置滚动位置)
+        function resetScroll() {
+            leftPanel.scrollTop = 0;
+            leftPanel.scrollLeft = 0;
+            rightPanel.scrollTop = 0;
+            rightPanel.scrollLeft = 0;
+        }
+
+        // 在渲染后重置滚动，避免错位
+        const originalRender = renderDiff;
+        renderDiff = function() {
+            originalRender();
+            resetScroll();
+        };
+        renderDiff(); // 重新赋值后执行一次确保正确
+
+        // 修复函数覆盖
+        diffButton.onclick = function() {
+            renderDiff();
+        };
+    })();
+</script>
+<!-- 确保渲染函数一致性 -->
+<script>
+    // 最后再包装确保renderDiff是最新的
+    (function finalize() {
+        const originalInput = document.getElementById('originalInput');
+        const modifiedInput = document.getElementById('modifiedInput');
+        const leftPanel = document.getElementById('leftPanel');
+        const rightPanel = document.getElementById('rightPanel');
+        const diffButton = document.getElementById('diffButton');
+
+        // 定义主函数 (已经存在，但为避免冲突显式定义)
+        window.renderDiff = function() {
+            const originalText = originalInput.value;
+            const modifiedText = modifiedInput.value;
+            const diffResult = Diff.diffLines(originalText, modifiedText);
+            const leftRows = [];
+            const rightRows = [];
+
+            for (let i = 0; i < diffResult.length; i++) {
+                const chunk = diffResult[i];
+                if (!chunk.added && !chunk.removed) {
+                    const lines = (chunk.value.split(/\r?\n/)).filter((line, idx, arr) => {
+                        // 保留空行逻辑：但如果最后一项是空且原串不结尾换行则去掉，为了重用写个简单split
+                        return true; // 稍后使用splitLinesPreserveEmpty
+                    });
+                    // 使用辅助函数
+                    const lines2 = splitLinesPreserveEmpty(chunk.value);
+                    lines2.forEach(l => { leftRows.push(l); rightRows.push(l); });
+                } else if (chunk.removed) {
+                    const remLines = splitLinesPreserveEmpty(chunk.value);
+                    let addLines = [];
+                    if (i + 1 < diffResult.length && diffResult[i + 1].added) {
+                        addLines = splitLinesPreserveEmpty(diffResult[i + 1].value);
+                        i++;
+                    }
+                    const max = Math.max(remLines.length, addLines.length);
+                    for (let j = 0; j < max; j++) {
+                        leftRows.push(remLines[j] !== undefined ? remLines[j] : '');
+                        rightRows.push(addLines[j] !== undefined ? addLines[j] : '');
+                    }
+                } else if (chunk.added) {
+                    const addLines = splitLinesPreserveEmpty(chunk.value);
+                    addLines.forEach(l => { leftRows.push(''); rightRows.push(l); });
+                }
+            }
+
+            leftPanel.innerHTML = '';
+            rightPanel.innerHTML = '';
+
+            if (leftRows.length === 0) {
+                leftRows.push(''); rightRows.push('');
+            }
+
+            for (let i = 0; i < leftRows.length; i++) {
+                const leftText = leftRows[i];
+                const rightText = rightRows[i];
+
+                const leftRow = document.createElement('div');
+                leftRow.className = 'line-row';
+                const leftGutter = document.createElement('span');
+                leftGutter.className = 'line-gutter';
+                leftGutter.textContent = i + 1;
+                leftRow.appendChild(leftGutter);
+                const leftContent = document.createElement('span');
+                leftContent.className = 'line-content';
+                leftContent.textContent = leftText;
+                leftRow.appendChild(leftContent);
+
+                const rightRow = document.createElement('div');
+                rightRow.className = 'line-row';
+                const rightGutter = document.createElement('span');
+                rightGutter.className = 'line-gutter';
+                rightGutter.textContent = i + 1;
+                rightRow.appendChild(rightGutter);
+                const rightContent = document.createElement('span');
+                rightContent.className = 'line-content';
+                rightContent.textContent = rightText;
+                rightRow.appendChild(rightContent);
+
+                // 高亮逻辑
+                if (leftText !== '' && rightText === '') leftRow.classList.add('deleted');
+                if (leftText === '' && rightText !== '') rightRow.classList.add('added');
+                if (leftText !== '' && rightText !== '' && leftText !== rightText) {
+                    leftRow.classList.add('deleted');
+                    rightRow.classList.add('added');
+                }
+
+                leftPanel.appendChild(leftRow);
+                rightPanel.appendChild(rightRow);
+            }
+
+            // 重置滚动
+            leftPanel.scrollTop = 0;
+            leftPanel.scrollLeft = 0;
+            rightPanel.scrollTop = 0;
+            rightPanel.scrollLeft = 0;
         };
 
-        // 移动端兼容的页面加载事件
-        function initPage() {
-            updateUsageInfo();
-            checkClaimStatus();
-        }
-
-        // 兼容不同浏览器的加载事件
-        if (document.readyState === 'complete' || document.readyState === 'interactive') {
-            initPage();
-        } else {
-            document.addEventListener('DOMContentLoaded', initPage);
-            window.addEventListener('load', initPage);
-        }
-
-        // 安全获取localStorage（兼容隐私模式）
-        function safeLocalStorageGet(key) {
-            try {
-                return localStorage.getItem(key);
-            } catch (e) {
-                return null; // 隐私模式下返回null
+        // 保证splitLinesPreserveEmpty在作用域
+        function splitLinesPreserveEmpty(str) {
+            if (str === '') return [];
+            const lines = str.split(/\r?\n/);
+            const endsWithNewline = str.endsWith('\n') || str.endsWith('\r\n');
+            if (!endsWithNewline && lines.length > 0 && lines[lines.length-1] === '') {
+                lines.pop();
             }
+            return lines;
         }
 
-        // 安全设置localStorage
-        function safeLocalStorageSet(key, value) {
-            try {
-                localStorage.setItem(key, value);
-                return true;
-            } catch (e) {
-                console.warn('本地存储不可用，部分功能受限');
-                return false;
-            }
+        // 绑定滚动 (复用之前的逻辑)
+        let lock = false;
+        function syncScroll() {
+            const left = document.getElementById('leftPanel');
+            const right = document.getElementById('rightPanel');
+            if (!left || !right) return;
+
+            const leftHandler = function() { if (!lock) { lock = true; right.scrollTop = left.scrollTop; right.scrollLeft = left.scrollLeft; lock = false; } };
+            const rightHandler = function() { if (!lock) { lock = true; left.scrollTop = right.scrollTop; left.scrollLeft = right.scrollLeft; lock = false; } };
+
+            left.removeEventListener('scroll', left._scrollHandler);
+            right.removeEventListener('scroll', right._scrollHandler);
+            left._scrollHandler = leftHandler;
+            right._scrollHandler = rightHandler;
+            left.addEventListener('scroll', leftHandler);
+            right.addEventListener('scroll', rightHandler);
         }
 
-        // 获取用户唯一标识
-        function getUserId() {
-            let userId = safeLocalStorageGet('cdk_user_id');
-            if (!userId) {
-                userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-                safeLocalStorageSet('cdk_user_id', userId);
-            }
-            return userId;
-        }
-
-        // 获取用户领取记录
-        function getUserClaimRecord() {
-            const record = safeLocalStorageGet('cdk_user_claims');
-            return record ? JSON.parse(record) : {
-                claims: [],
-                periodStart: Date.now()
-            };
-        }
-
-        // 获取全局发放记录
-        function getGlobalClaimRecord() {
-            const record = safeLocalStorageGet('cdk_global_claims');
-            return record ? JSON.parse(record) : {
-                issuedCdks: [],
-                periodStart: Date.now()
-            };
-        }
-
-        // 检查并重置周期
-        function checkAndResetPeriod(userRecord, globalRecord) {
-            const now = Date.now();
-            
-            if (now - userRecord.periodStart > CONFIG.PERIOD_DURATION) {
-                userRecord.claims = [];
-                userRecord.periodStart = now;
-                safeLocalStorageSet('cdk_user_claims', JSON.stringify(userRecord));
-            }
-            
-            if (now - globalRecord.periodStart > CONFIG.PERIOD_DURATION) {
-                globalRecord.issuedCdks = [];
-                globalRecord.periodStart = now;
-                safeLocalStorageSet('cdk_global_claims', JSON.stringify(globalRecord));
-            }
-            
-            return { userRecord, globalRecord };
-        }
-
-        // 更新使用信息
-        function updateUsageInfo() {
-            const userRecord = getUserClaimRecord();
-            const now = Date.now();
-            
-            const usedCount = userRecord.claims.length;
-            document.getElementById('usedCount').textContent = usedCount;
-            
-            const timeLeft = Math.max(0, (userRecord.periodStart + CONFIG.PERIOD_DURATION) - now);
-            const hoursLeft = Math.ceil(timeLeft / (60 * 60 * 1000));
-            document.getElementById('resetTime').textContent = hoursLeft;
-        }
-
-        // 检查领取状态
-        function checkClaimStatus() {
-            const userRecord = getUserClaimRecord();
-            const { userRecord: updatedUserRecord } = checkAndResetPeriod(userRecord, getGlobalClaimRecord());
-            
-            const btn = document.getElementById('getCdkBtn');
-            const statusText = document.getElementById('statusText');
-            
-            if (updatedUserRecord.claims.length >= CONFIG.MAX_CLAIMS_PER_PERIOD) {
-                btn.disabled = true;
-                statusText.textContent = `你已达到3天内最大领取次数(${CONFIG.MAX_CLAIMS_PER_PERIOD}次)，请等待周期重置后再试！`;
-                statusText.className = 'info-text warning';
-            } else {
-                btn.disabled = false;
-                statusText.textContent = `点击下方按钮领取CDK，每人3天内最多领取${CONFIG.MAX_CLAIMS_PER_PERIOD}次，且领取的CDK不重复`;
-                statusText.className = 'info-text';
-            }
-        }
-
-        // 获取未发放的CDK
-        function getUnissuedCDK(globalRecord) {
-            const availableCdks = cdkList.filter(item => !globalRecord.issuedCdks.includes(item.cdk));
-            
-            if (availableCdks.length === 0) {
-                return null;
-            }
-            
-            const randomIndex = Math.floor(Math.random() * availableCdks.length);
-            return availableCdks[randomIndex];
-        }
-
-        // 领取CDK主函数（兼容移动端触摸）
-        function getCDK() {
-            try {
-                let userRecord = getUserClaimRecord();
-                let globalRecord = getGlobalClaimRecord();
-                
-                const { userRecord: updatedUserRecord, globalRecord: updatedGlobalRecord } = checkAndResetPeriod(userRecord, globalRecord);
-                
-                if (updatedUserRecord.claims.length >= CONFIG.MAX_CLAIMS_PER_PERIOD) {
-                    document.getElementById('statusText').textContent = `你已达到3天内最大领取次数(${CONFIG.MAX_CLAIMS_PER_PERIOD}次)！`;
-                    document.getElementById('statusText').className = 'info-text warning';
-                    return;
-                }
-                
-                const cdkItem = getUnissuedCDK(updatedGlobalRecord);
-                if (!cdkItem) {
-                    document.getElementById('statusText').textContent = '当前暂无可用的CDK，请稍后再试！';
-                    document.getElementById('statusText').className = 'info-text warning';
-                    return;
-                }
-                
-                updatedUserRecord.claims.push({
-                    cdk: cdkItem.cdk,
-                    invite: cdkItem.invite,
-                    timestamp: Date.now()
-                });
-                
-                updatedGlobalRecord.issuedCdks.push(cdkItem.cdk);
-                
-                safeLocalStorageSet('cdk_user_claims', JSON.stringify(updatedUserRecord));
-                safeLocalStorageSet('cdk_global_claims', JSON.stringify(updatedGlobalRecord));
-                
-                document.getElementById('cdkCode').textContent = cdkItem.cdk;
-                document.getElementById('inviteCode').textContent = cdkItem.invite;
-                
-                document.getElementById('statusText').textContent = '领取成功！CDK和助力码如上：';
-                document.getElementById('statusText').className = 'info-text success';
-                updateUsageInfo();
-                checkClaimStatus();
-                
-            } catch (error) {
-                console.error('领取CDK出错:', error);
-                document.getElementById('statusText').textContent = '领取失败，请刷新页面重试！';
-                document.getElementById('statusText').className = 'info-text warning';
-            }
-        }
-
-        // 为移动端添加触摸事件支持
-        document.getElementById('getCdkBtn').addEventListener('touchstart', function(e) {
-            e.preventDefault(); // 防止默认行为
-            this.style.background = '#0056b3';
+        window.addEventListener('load', function() {
+            window.renderDiff();
+            syncScroll();
         });
-
-        document.getElementById('getCdkBtn').addEventListener('touchend', function(e) {
-            e.preventDefault();
-            if (!this.disabled) {
-                this.style.background = '#007bff';
-                getCDK();
-            }
+        diffButton.addEventListener('click', function() {
+            window.renderDiff();
+            syncScroll();
         });
-    </script>
+    })();
+</script>
 </body>
 </html>
